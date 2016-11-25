@@ -13,8 +13,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from slave.protocol import Protocol
+import slave
 import logging
+
+from slave.protocol import Protocol
+from slave.transport import Timeout
+
 
 class LakeShore336Protocol(Protocol):
     def __init__(self, terminal="\r\n", separator=',', encoding='ascii', logger=None):
@@ -27,6 +31,13 @@ class LakeShore336Protocol(Protocol):
         self.separator = separator
         self.logger = logger
         self.encoding = encoding
+
+    def clear(self, transport):
+        try:
+            while True:
+                transport.read_bytes(5)
+        except slave.transport.Timeout:
+            return
 
     def set_logger(self, logger):
         self.logger = logger

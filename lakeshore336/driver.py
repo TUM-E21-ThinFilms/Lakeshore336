@@ -14,7 +14,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from slave.driver import Driver, Command
-from slave.types import Mapping, Float, String, Integer, Boolean, SingleType
+from slave.types import Float, String, Integer, Boolean, SingleType
 from protocol import LakeShore336Protocol
 
 class Empty(SingleType):
@@ -77,7 +77,9 @@ class LakeShore336Driver(Driver):
         return self.query_command(cmd)
     
     def clear(self):
+        self._protocol.clear(self._transport)
         self._write('*CLS')
+        self._protocol.clear(self._transport)
     
     def operation_complete(self):
         self._write(('*OPC'))
