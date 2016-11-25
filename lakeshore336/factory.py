@@ -19,8 +19,7 @@ from slave.transport import Serial
 import logging
 
 class LakeShore336Factory:
-
-    def get_logger(self):
+	def get_logger(self):
 		logger = logging.getLogger('Lake Shore Model 336')
 		logger.setLevel(logging.DEBUG)
 		formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
