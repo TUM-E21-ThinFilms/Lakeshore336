@@ -194,9 +194,9 @@ class LakeShore336Driver(Driver):
 
     def is_channel_str(self, channel):
         if not isinstance(channel, basestring):
-	    return False
+            return False
 
-	channel = str(channel).upper()
+	    channel = str(channel).upper()
         return channel == 'A' or channel == 'B' or channel == 'C' or channel == 'D'
     
     def is_channel_int(self, channel):
@@ -228,11 +228,15 @@ class LakeShore336Driver(Driver):
     def to_int_channel(self, channel):
         if self.is_channel_int(channel):
             return channel
-        else:
+        elif self.is_channel_str(channel):
             return self.channel_str_to_int(channel)
+        else:
+            raise ValueError("Unknown channel %s" % repr(channel))
         
     def to_str_channel(self, channel):
         if self.is_channel_str(channel):
             return channel.upper()
-        else:
+        elif self.is_channel_int():
             return self.channel_int_to_str(channel)
+        else:
+            raise ValueError("Unknown channel %s" % repr(channel))
