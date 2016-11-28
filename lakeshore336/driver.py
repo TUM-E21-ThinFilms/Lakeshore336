@@ -51,8 +51,10 @@ class LakeShore336Driver(Driver):
     
     def set_control_setpoint(self, channel, value):
         channel = self.to_int_channel(channel)
-        cmd = Command(('SETP '+str(channel)+','+str(value)))
-        return self.query_command(cmd)
+#        cmd = Command(('SETP '+str(channel)+','+str(value)))
+#        return self.query_command(cmd)
+        self._write('SETP '+str(channel)+','+str(value))
+
                       
     def get_control_setpoint(self, channel):
         channel = self.to_int_channel(channel)
