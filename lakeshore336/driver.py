@@ -23,6 +23,12 @@ class Empty(SingleType):
 
 class LakeShore336Driver(Driver):
 
+    HEATER_RANGE_OFF = '0'
+    HEATER_RANGE_ON  = '1'
+    HEATER_RANGE_LOW = '1'
+    HEATER_RANGE_MED = '2'
+    HEATER_RANGE_HIGH = '3'
+
     def __init__(self, transport, protocol=None):
         if protocol is None:
             protocol = LakeShore336Protocol()
@@ -114,7 +120,7 @@ class LakeShore336Driver(Driver):
         return self.query_command(cmd)
     
     def setup_heater(self, channel, resistance, max_current, max_user_current, display_current_or_power):
-        self._write('HTRSET ' + ",".join([str(self.to_int_channel(channel)), str(resistance), str(max_user_current), str(display_current_or_power)]))
+        self._write('HTRSET ' + ",".join([str(self.to_int_channel(channel)), str(resistance), str(max_current), str(max_user_current), str(display_current_or_power)]))
         
     def get_heater_config(self, channel):
         channel = str(self.to_int_channel(channel))
@@ -142,7 +148,7 @@ class LakeShore336Driver(Driver):
         return self.query_command(cmd)
     
     def set_led(self, enable):
-        self._write('LEDS '+str(enalbe))
+        self._write('LEDS '+str(enable))
         
     def get_led(self):
         cmd = Command(('LEDS?', Boolean))
@@ -160,6 +166,9 @@ class LakeShore336Driver(Driver):
         return self.query_command(cmd)
                                        
     def set_heater_range(self, channel, rng):
+        if rng not in [self.HEATER_RANGE_HIGH, self.HEATER_RANGE_LOW, self.HEATER_RANGE_MED, self.HEATER_RANGE_OFF, self.HEATER_RANGE_ON]:
+            raise ValueError("Unknown range given")
+
         self._write('RANGE ' + ",".join([str(self.to_int_channel(channel)), str(rng)]))
                                        
     def get_heater_range(self, channel):
@@ -180,8 +189,7 @@ class LakeShore336Driver(Driver):
     def get_analog_output(self, channel):
         cmd = Command(('AOUT? ' + str(self.to_int_channel(channel)), Float))
         return self.query_command(cmd)
-    
-    
+
     def is_channel_str(self, channel):
         channel = str(channel).upper()
         return channel == 'A' or channel == 'B' or channel == 'C' or channel == 'D'
