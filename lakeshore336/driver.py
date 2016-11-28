@@ -193,7 +193,10 @@ class LakeShore336Driver(Driver):
         return self.query_command(cmd)
 
     def is_channel_str(self, channel):
-        channel = str(channel).upper()
+        if not isinstance(channel, basestring):
+	    return False
+
+	channel = str(channel).upper()
         return channel == 'A' or channel == 'B' or channel == 'C' or channel == 'D'
     
     def is_channel_int(self, channel):
