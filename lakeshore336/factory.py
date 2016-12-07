@@ -15,10 +15,11 @@
 
 from protocol import LakeShore336Protocol
 from driver import LakeShore336Driver
-from slave.transport import Serial
+from e21_util.transport import Serial
 import logging
 
 class LakeShore336Factory:
+
 	def get_logger(self):
 		logger = logging.getLogger('Lake Shore Model 336')
 		logger.setLevel(logging.DEBUG)

@@ -16,9 +16,11 @@
 import slave
 import logging
 
+import e21_util
+from e21_util.lock import InterProcessTransportLock
+
 from slave.protocol import Protocol
 from slave.transport import Timeout
-
 
 class LakeShore336Protocol(Protocol):
     def __init__(self, terminal="\r\n", separator=',', encoding='ascii', logger=None):
@@ -33,11 +35,12 @@ class LakeShore336Protocol(Protocol):
         self.encoding = encoding
 
     def clear(self, transport):
-        try:
-            while True:
-                transport.read_bytes(5)
-        except slave.transport.Timeout:
-            return
+        with InterProcessTransportLock(transport):
+            try:
+                while True:
+                    transport.read_bytes(5)
+            except slave.transport.Timeout:
+                return
 
     def set_logger(self, logger):
         self.logger = logger
@@ -53,17 +56,19 @@ class LakeShore336Protocol(Protocol):
         return response.decode(self.encoding).split(self.separator)         
     
     def query(self, transport, header, *data):
-        message = self.create_message(header, *data)
-        self.logger.debug('Query: %s', repr(message))
-        with transport:
-            transport.write(message)
-            response = transport.read_until(self.terminal.encode(self.encoding))
-        self.logger.debug('Response: %s', repr(response))
-        return self.parse_response(response,header)
+        with InterProcessTransportLock(transport):
+            message = self.create_message(header, *data)
+            self.logger.debug('Query: %s', repr(message))
+            with transport:
+                transport.write(message)
+                response = transport.read_until(self.terminal.encode(self.encoding))
+            self.logger.debug('Response: %s', repr(response))
+            return self.parse_response(response,header)
 
     def write(self, transport, header, *data):
-        message = self.create_message(header, *data)
-        self.logger.debug('Write: %s', repr(message))
-        with transport:
-            transport.write(message)
+        with InterProcessTransportLock(transport):
+            message = self.create_message(header, *data)
+            self.logger.debug('Write: %s', repr(message))
+            with transport:
+                transport.write(message)
         
