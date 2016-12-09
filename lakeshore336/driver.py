@@ -236,7 +236,7 @@ class LakeShore336Driver(Driver):
     def to_str_channel(self, channel):
         if self.is_channel_str(channel):
             return channel.upper()
-        elif self.is_channel_int():
+        elif self.is_channel_int(channel):
             return self.channel_int_to_str(channel)
         else:
             raise ValueError("Unknown channel %s" % repr(channel))
