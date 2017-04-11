@@ -16,19 +16,12 @@
 from protocol import LakeShore336Protocol
 from driver import LakeShore336Driver
 from e21_util.transport import Serial
-import logging
+from e21_util.logging import get_sputter_logger
 
 class LakeShore336Factory:
 
 	def get_logger(self):
-		logger = logging.getLogger('Lake Shore Model 336')
-		logger.setLevel(logging.DEBUG)
-		formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-		fh = logging.FileHandler('lakeshore336.log')
-		fh.setLevel(logging.DEBUG)
-		fh.setFormatter(formatter)
-		logger.addHandler(fh)
-		return logger
+		return get_sputter_logger('Lake Shore Model 336', 'lakeshore336.log')
 	
 	def create_lakeshore(self, device='/dev/ttyUSB0', logger=None):
 		if logger is None:
