@@ -32,4 +32,4 @@ class LakeShore336Factory:
 			device = Ports().get_port(Ports.DEVICE_LAKESHORE)
 
 		protocol = LakeShore336Protocol(logger=logger)
-		return LakeShore336Driver(Serial(device, 57600, 7, 'O', 1, 0.1), protocol)
+		return LakeShore336Driver(Serial(device, 57600, 7, 'O', 1, 1), protocol)
