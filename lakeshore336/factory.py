@@ -21,15 +21,9 @@ from e21_util.ports import Ports
 
 
 class LakeShore336Factory:
-	def get_logger(self):
-		return get_sputter_logger('Lake Shore Model 336', 'lakeshore336.log')
+    def get_logger(self):
+        return get_sputter_logger('Lake Shore Model 336', 'lakeshore336.log')
 
-	def create_lakeshore(self, device=None, logger=None):
-		if logger is None:
-			logger = self.get_logger()
-
-		if device is None:
-			device = Ports().get_port(Ports.DEVICE_LAKESHORE)
-
-		protocol = LakeShore336Protocol(logger=logger)
-		return LakeShore336Driver(Serial(device, 57600, 7, 'O', 1, 1), protocol)
+    @staticmethod
+    def create(transport, logger):
+        return LakeShore336Driver(LakeShore336Protocol(transport, logger=logger))

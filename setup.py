@@ -17,7 +17,7 @@ import sys
 
 from setuptools import setup, find_packages
 
-requires = ['slave', 'e21_util']
+requires = ['e21_util']
 
 desc = ('An implementation of the LakeShore 336 Model')
 

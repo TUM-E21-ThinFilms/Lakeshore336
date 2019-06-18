@@ -13,15 +13,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from slave.driver import Driver, Command
-from slave.types import Float, String, Integer, Boolean, SingleType
 from protocol import LakeShore336Protocol
 
-class Empty(SingleType):
-    def __convert__(self, value):
-        return None
-
-class LakeShore336Driver(Driver):
+class LakeShore336Driver(object):
 
     HEATER_RANGE_OFF = '0'
     HEATER_RANGE_ON  = '1'
@@ -29,175 +23,129 @@ class LakeShore336Driver(Driver):
     HEATER_RANGE_MED = '2'
     HEATER_RANGE_HIGH = '3'
 
-    def __init__(self, transport, protocol=None):
-        if protocol is None:
-            protocol = LakeShore336Protocol()
-        
-        self.thread = None
-        
-        super(LakeShore336Driver, self).__init__(transport, protocol)
+    CHANNEL_A = 'A'
+    CHANNEL_B = 'B'
+    CHANNEL_C = 'C'
+    CHANNEL_D = 'D'
 
-    def query_command(self, cmd):
-        return cmd.query(self._transport, self._protocol)
+    CHANNELS = [CHANNEL_A, CHANNEL_B, CHANNEL_C, CHANNEL_D]
+
+    def __init__(self, protocol):
+        assert isinstance(protocol, LakeShore336Protocol)
+
+        self._protocol = protocol
+
+    def query(self, cmd, *data):
+        return self._protocol.query(cmd, *data)
+
+    def write(self, cmd, *data):
+        self._protocol.write(cmd, *data)
 
     def get_identification(self):
-        cmd = Command(('*IDN?', [String, String, String, Float]))
-        return self.query_command(cmd)
+        return self.query_command('*IDN?')
     
-    def get_temperature(self, input_channel):
-        input_channel = self.to_str_channel(input_channel)
-        cmd = Command(('KRDG? ' + str(input_channel), Float))
-        return self.query_command(cmd)
+    def get_temperature(self, channel):
+        """
+        :param input_channel:
+        :return: Returns the temperature of the given channel in float, units being Kelvin
+        """
+        channel = self.to_str_channel(channel)
+        return float(self.query_command('KRDG?', channel))
     
-    def set_control_setpoint(self, channel, value):
-        channel = self.to_int_channel(channel)
-#        cmd = Command(('SETP '+str(channel)+','+str(value)))
-#        return self.query_command(cmd)
-        self._write('SETP '+str(channel)+','+str(value))
+    def set_control_setpoint(self, output, value):
+        output = self.to_int_channel(output)
 
-                      
-    def get_control_setpoint(self, channel):
-        channel = self.to_int_channel(channel)
-        cmd = Command(('SETP? '+str(channel), Float))
-        return self.query_command(cmd)
+        self.write('SETP', output, value)
+
+    def get_control_setpoint(self, output):
+        output = self.to_int_channel(output)
+        return float(self.query('SETP?', output))
     
-    def set_pid(self, channel, p, i, d):
-        channel = self.to_int_channel(channel)
-        if channel > 2: 
-            raise ValueError('Channel 1 or 2 are only allowed for PID values')
-        
-        cmd = Command(('PID '+str(channel)+','+str(p)+','+str(i)+','+str(d)))
-        return self.query_command(cmd)
+    def set_pid(self, output, p, i, d):
+        output = self.to_int_channel(output)
+        if output > 2:
+            raise ValueError('Output 1 or 2 are only allowed for PID values')
+
+        self.write('PID', output, p, i, d)
     
-    def get_pid(self, channel):
-        channel = self.to_int_channel(channel)
-        cmd = Command(('PID? '+str(channel), [Float, Float, Float]))
-        return self.query_command(cmd)
-    
+    def get_pid(self, output):
+        """
+        :param output:
+        :return: Returns the p, i, d parameter as floats
+        """
+        output = self.to_int_channel(output)
+        response = self.query('PID?', output)
+        return list(map(float, response))
+
     def set_temperature_limit(self, channel, limit):
         channel = self.to_str_channel(channel)
-        cmd = Command(('TLIMIT '+str(channel)+','+str(limit)))
-        return self.query_command(cmd)
+        self.write('TLIMIT', channel, limit)
     
     def get_temperature_limit(self, channel):
         channel = self.to_str_channel(channel)
-        cmd = Command(('TLIMIT? '+str(channel), Float))
-        return self.query_command(cmd)
+        return float(self.query('TLIMIT?', channel))
     
     def clear(self):
         self._protocol.clear(self._transport)
-        self._write('*CLS')
+        self.write('*CLS')
         self._protocol.clear(self._transport)
-    
-    def operation_complete(self):
-        self._write(('*OPC'))
-    
-    def is_operation_complete(self):
-        cmd = Command(('*OPC?', Boolean))
-        return self.query_command(cmd)
-    
+
     def reset(self):
-        self._write(('RST'))
+        self.write('*RST')
     
     def set_alarm(self, channel, enabled, high, low, deadband, latch_enabled, audible, visible):
         channel = self.to_str_channel(channel)
-        self._write('ALARM ' + ",".join([channel, str(enabled), str(high), str(low), str(deadband), str(latch_enabled), str(audible), str(visible)]))
+        self.write('ALARM', channel, enabled, high, low, deadband, latch_enabled, audible, visible)
                       
     def get_alarm(self, channel):
         channel = self.to_str_channel(channel)
-        cmd = Command(('ALARM? ' + channel, [Boolean, Float, Float, Float, Boolean, Boolean, Boolean]))
-        return self.query_command(cmd)
+        return self.query('ALARM?', channel)
     
-    def get_alarm_status(self, channel, high, low):
+    def get_alarm_status(self, channel):
         channel = self.to_str_channel(channel)
-        cmd = Command(('ALARMST? ' + channel, [Boolean, Boolean]))
-        return self.query_command(cmd)
+        response = self.query('ALARMST?', channel)
+        return list(map(bool, response))
     
     def reset_alarm(self):
-        self._write('ALMRST')
-        
-    def get_heater_output(self, channel):
-        channel = self.to_int_channel(channel)
-        cmd = Command(('HTR? ' + str(channel), Float))
-        return self.query_command(cmd)
-    
-    def setup_heater(self, channel, resistance, max_current, max_user_current, display_current_or_power):
-        self._write('HTRSET ' + ",".join([str(self.to_int_channel(channel)), str(resistance), str(max_current), str(max_user_current), str(display_current_or_power)]))
-        
-    def get_heater_config(self, channel):
-        channel = str(self.to_int_channel(channel))
-        cmd = Command(('HTRSET? ' + channel, [Integer, Integer, Float, Integer]))
-        return self.query_command(cmd)
-    
-    def get_heater_status(self, channel):
-        channel = str(self.to_int_channel(channel))
-        cmd = Command(('HTRST? ' + channel, Integer))
-        return self.query_command(cmd)
-    
-    def set_input_curve(self, channel, number):
-        channel = self.to_str_channel(channel)
-        self._write('INCRV ' + ",".join([channel, str(number)]))
-        
-    def get_input_curve(self, channel):
-        cmd = Command(('INCRV? ' + self.to_str_channel(channel), Integer))
-        return self.query_command(cmd)
+        self.write('ALMRST')
     
     def set_input_name(self, channel, name):
-        self._write('INNAME ' ",".join([self.to_str_channel(channel), str(name)]))
+        if not(name[0] == '"' and name[-1] == '"'):
+            name = '"' + name + '"'
+
+        self.write('INNAME', channel, name)
         
     def get_input_name(self, channel):
-        cmd = Command(('INNAME? ' + self.to_str_channel(channel), String))
-        return self.query_command(cmd)
+        return self.query('INNAME?', channel)
     
     def set_led(self, enable):
-        self._write('LEDS '+str(enable))
+        if enable:
+            enable = 1
+        else:
+            enable = 0
+
+        self.write('LEDS', enable)
         
     def get_led(self):
-        cmd = Command(('LEDS?', Boolean))
-        return self.query_command(cmd)
-    
-    def set_ramp_setpoint(self, channel, enabled, rate):
-        self._write('RAMP '+ ",".join([str(self.to_int_channel(channel)), str(enabled), str(rate)]))
-                                       
-    def get_ramp_setpoint(self, channel):
-        cmd = Command(('RAMP? ' + str(self.to_int_channel(channel)), [Boolean, Float]))
-        return self.query_command(cmd)
-                                       
-    def get_ramp_status(self, channel):
-        cmd = Command(('RAMPST? ' + str(self.to_int_channel(channel)), Boolean))
-        return self.query_command(cmd)
+        return bool(int(self.query('LEDS?')))
                                        
     def set_heater_range(self, channel, rng):
         if rng not in [self.HEATER_RANGE_HIGH, self.HEATER_RANGE_LOW, self.HEATER_RANGE_MED, self.HEATER_RANGE_OFF, self.HEATER_RANGE_ON]:
             raise ValueError("Unknown range given")
+        channel = self.to_int_channel(channel)
+        self.write("RANGE", channel, rng)
 
-        self._write('RANGE ' + ",".join([str(self.to_int_channel(channel)), str(rng)]))
-                                       
     def get_heater_range(self, channel):
-        cmd = Command(('RANGE? ' + str(self.to_int_channel(channel)), Integer))
-        return self.query_command(cmd)
+        return int(self.query('RANGE?', channel))
                                        
-    def get_temp(self):
-        cmd = Command(('TEMP?', Float))
-        return self.query_command(cmd)
-                                       
-    def set_warmup(self, channel, control, percentage):
-        self._write('WARMUP ' + ",".join([str(self.to_int_channel(channel)), str(control), str(percentage)]))
-                                       
-    def get_warmup(self, channel):
-        cmd = Command(('WARMUP? ' + str(self.to_int_channel(channel)), [Boolean, Float]))
-        return self.query_command(cmd)
-                                       
-    def get_analog_output(self, channel):
-        cmd = Command(('AOUT? ' + str(self.to_int_channel(channel)), Float))
-        return self.query_command(cmd)
+    def get_thermocouple_junction_temperature(self):
+        return float(self.query('TEMP?'))
 
     def is_channel_str(self, channel):
         if not isinstance(channel, basestring):
             return False
-
-	    channel = str(channel).upper()
-        return channel == 'A' or channel == 'B' or channel == 'C' or channel == 'D'
+        channel = str(channel).upper()
+        return channel in self.CHANNELS
     
     def is_channel_int(self, channel):
         return isinstance( channel, (int, long)) and channel <= 4 and channel >= 1

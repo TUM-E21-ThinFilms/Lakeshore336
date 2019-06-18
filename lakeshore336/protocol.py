@@ -13,62 +13,61 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import slave
-import logging
+from e21_util.error import CommunicationError
+from e21_util.interface import Loggable
+from e21_util.serial_connection import AbstractTransport, SerialTimeoutException
 
-import e21_util
-from e21_util.lock import InterProcessTransportLock
+class LakeShore336Protocol(Loggable):
+    def __init__(self, transport, logger):
+        super(LakeShore336Protocol, self).__init__(logger)
+        assert isinstance(transport, AbstractTransport)
 
-from slave.protocol import Protocol
-from slave.transport import Timeout
+        self.terminal = "\r\n"
+        self.separator = ","
+        self.encoding = "ascii"
 
-class LakeShore336Protocol(Protocol):
-    def __init__(self, terminal="\r\n", separator=',', encoding='ascii', logger=None):
+        self._transport = transport
 
-        if logger is None:
-            logger = logging.getLogger(__name__)
-            logger.addHandler(logging.NullHandler())
-
-        self.terminal = terminal
-        self.separator = separator
-        self.logger = logger
-        self.encoding = encoding
-
-    def clear(self, transport):
-        with InterProcessTransportLock(transport):
+    def clear(self):
+        with self._transport:
             try:
                 while True:
-                    transport.read_bytes(5)
-            except slave.transport.Timeout:
+                    self._transport.read_bytes(5)
+            except SerialTimeoutException:
                 return
 
-    def set_logger(self, logger):
-        self.logger = logger
-
     def create_message(self, header, *data):
-        msg = []
-        msg.append(header)
-        msg.extend(data)
-        msg.append(self.terminal)
-        return ''.join(msg).encode(self.encoding)    
+        if data is None:
+            data = []
+
+        data = map(str, data)
+
+        if not header[-1] == " ":
+            header = header + " "
+
+        msg = [header] + data + [self.terminal]
+
+        return ''.join(msg).encode(self.encoding)
 
     def parse_response(self, response, header):
-        return response.decode(self.encoding).split(self.separator)         
-    
-    def query(self, transport, header, *data):
-        with InterProcessTransportLock(transport):
-            message = self.create_message(header, *data)
-            self.logger.debug('Query: %s', repr(message))
-            with transport:
-                transport.write(message)
-                response = transport.read_until(self.terminal.encode(self.encoding))
-            self.logger.debug('Response: %s', repr(response))
-            return self.parse_response(response,header)
+        resp = response.decode(self.encoding).split(self.separator)
 
-    def write(self, transport, header, *data):
-        with InterProcessTransportLock(transport):
+        if len(resp) == 1:
+            return resp[0]
+
+        return resp
+    
+    def query(self, header, *data):
+        with self._transport:
             message = self.create_message(header, *data)
-            self.logger.debug('Write: %s', repr(message))
-            with transport:
-                transport.write(message)
-        
+            self._logger.debug('Query: %s', repr(message))
+            self._transport.write(message)
+            response = self._transport.read_until(self.terminal.encode(self.encoding))
+            self._logger.debug('Response: %s', repr(response))
+            return self.parse_response(response, header)
+
+    def write(self, header, *data):
+        with self._transport:
+            message = self.create_message(header, *data)
+            self._logger.debug('Write: %s', repr(message))
+            self._transport.write(message)
