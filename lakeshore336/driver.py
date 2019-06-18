@@ -42,7 +42,7 @@ class LakeShore336Driver(object):
         self._protocol.write(cmd, *data)
 
     def get_identification(self):
-        return self.query_command('*IDN?')
+        return self.query('*IDN?')
     
     def get_temperature(self, channel):
         """
@@ -50,7 +50,7 @@ class LakeShore336Driver(object):
         :return: Returns the temperature of the given channel in float, units being Kelvin
         """
         channel = self.to_str_channel(channel)
-        return float(self.query_command('KRDG?', channel))
+        return float(self.query('KRDG?', channel))
     
     def set_control_setpoint(self, output, value):
         output = self.to_int_channel(output)
