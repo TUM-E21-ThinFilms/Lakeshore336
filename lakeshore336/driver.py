@@ -86,9 +86,9 @@ class LakeShore336Driver(object):
         return float(self.query('TLIMIT?', channel))
     
     def clear(self):
-        self._protocol.clear(self._transport)
+        self._protocol.clear()
         self.write('*CLS')
-        self._protocol.clear(self._transport)
+        self._protocol.clear()
 
     def reset(self):
         self.write('*RST')
